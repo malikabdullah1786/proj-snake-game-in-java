@@ -7,10 +7,10 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ignored) {}
-
-            GameFrame frame = new GameFrame();
-            frame.setVisible(true);
+            } catch (Exception e) {
+                // Fallback to default
+            }
+            new GameFrame();
         });
     }
 }
