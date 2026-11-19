@@ -2,130 +2,84 @@ package com.arcade.snake;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
-public class GamePanel extends JPanel {
-    private GameEngine gameEngine;
-    private static final int CELL_SIZE = 20;
+public class GamePanel extends JPanel implements ActionListener {
+    private static final int BOARD_WIDTH = 600;
+    private static final int BOARD_HEIGHT = 500;
+    private static final int TILE_SIZE = 20;
+    private static final int TIMER_DELAY = 100; // 100ms ticks
 
-    public GamePanel() {
-        setPreferredSize(new Dimension(600, 600));
-        setBackground(new Color(20, 20, 30));
+    private final GameEngine gameEngine;
+    private final Board board;
+    private final Timer timer;
+    private final ScorePanel scorePanel;
+
+    public GamePanel(ScorePanel scorePanel) {
+        this.scorePanel = scorePanel;
+        setPreferredSize(new Dimension(BOARD_WIDTH, BOARD_HEIGHT));
+        setBackground(new Color(20, 24, 33));
         setFocusable(true);
+
+        this.gameEngine = new GameEngine(BOARD_WIDTH, BOARD_HEIGHT, TILE_SIZE);
+        this.board = new Board(BOARD_WIDTH, BOARD_HEIGHT, TILE_SIZE);
+
+        addKeyListener(new TAdapter());
+
+        this.timer = new Timer(TIMER_DELAY, this);
+        this.timer.start();
     }
 
-    public void setGameEngine(GameEngine gameEngine) {
-        this.gameEngine = gameEngine;
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        gameEngine.tick();
+        scorePanel.updateScore(gameEngine.getScore());
+        repaint();
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (gameEngine == null) return;
-
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        board.render(g2d, gameEngine.getSnake(), gameEngine.getFood(), gameEngine.isGameOver());
+    }
 
-        GameEngine.GameState state = gameEngine.getState();
+    private class TAdapter extends KeyAdapter {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            int key = e.getKeyCode();
 
-        if (state == GameEngine.GameState.MENU) {
-            drawMenu(g2d);
-        } else {
-            drawBoard(g2d);
-            drawFood(g2d);
-            drawSnake(g2d);
-            drawObstacles(g2d);
+            if (gameEngine.isGameOver()) {
+                if (key == KeyEvent.VK_ENTER || key == KeyEvent.VK_SPACE) {
+                    gameEngine.reset();
+                    scorePanel.updateScore(gameEngine.getScore());
+                    repaint();
+                }
+                return;
+            }
 
-            if (state == GameEngine.GameState.PAUSED) {
-                drawOverlay(g2d, "PAUSED", "Press SPACE or P to Resume");
-            } else if (state == GameEngine.GameState.GAMEOVER) {
-                drawOverlay(g2d, "GAME OVER", "Press ENTER to Play Again");
+            switch (key) {
+                case KeyEvent.VK_UP:
+                case KeyEvent.VK_W:
+                    gameEngine.getSnake().setDirection(Direction.UP);
+                    break;
+                case KeyEvent.VK_DOWN:
+                case KeyEvent.VK_S:
+                    gameEngine.getSnake().setDirection(Direction.DOWN);
+                    break;
+                case KeyEvent.VK_LEFT:
+                case KeyEvent.VK_A:
+                    gameEngine.getSnake().setDirection(Direction.LEFT);
+                    break;
+                case KeyEvent.VK_RIGHT:
+                case KeyEvent.VK_D:
+                    gameEngine.getSnake().setDirection(Direction.RIGHT);
+                    break;
             }
         }
-    }
-
-    private void drawMenu(Graphics2D g2d) {
-        g2d.setColor(Color.WHITE);
-        g2d.setFont(new Font("Arial", Font.BOLD, 36));
-        String title = "RETRO SNAKE ARCADE";
-        FontMetrics fm = g2d.getFontMetrics();
-        g2d.drawString(title, (getWidth() - fm.stringWidth(title)) / 2, 180);
-
-        g2d.setFont(new Font("Arial", Font.PLAIN, 18));
-        String sub = "Press ENTER to Start Classic Game";
-        fm = g2d.getFontMetrics();
-        g2d.drawString(sub, (getWidth() - fm.stringWidth(sub)) / 2, 260);
-
-        String controls = "Controls: Arrow Keys / WASD to Move, SPACE to Pause";
-        g2d.drawString(controls, (getWidth() - g2d.getFontMetrics().stringWidth(controls)) / 2, 340);
-        
-        String modeInfo = "Modes: Classic, Arcade, Obstacles, Campaign";
-        g2d.drawString(modeInfo, (getWidth() - g2d.getFontMetrics().stringWidth(modeInfo)) / 2, 380);
-    }
-
-    private void drawBoard(Graphics2D g2d) {
-        if (gameEngine.isGridLinesEnabled()) {
-            g2d.setColor(new Color(35, 35, 48));
-            for (int i = 0; i < getWidth(); i += CELL_SIZE) {
-                g2d.drawLine(i, 0, i, getHeight());
-            }
-            for (int j = 0; j < getHeight(); j += CELL_SIZE) {
-                g2d.drawLine(0, j, getWidth(), j);
-            }
-        }
-
-        Board board = gameEngine.getBoard();
-        if (board.isWallsEnabled()) {
-            g2d.setColor(new Color(200, 50, 50));
-            g2d.setStroke(new BasicStroke(3));
-            g2d.drawRect(0, 0, board.getWidth() * CELL_SIZE, board.getHeight() * CELL_SIZE);
-        }
-    }
-
-    private void drawSnake(Graphics2D g2d) {
-        Snake snake = gameEngine.getSnake();
-        for (int i = 0; i < snake.getLength(); i++) {
-            if (i == 0) {
-                g2d.setColor(new Color(50, 220, 100)); // Head
-            } else {
-                g2d.setColor(new Color(40, 180, 80)); // Body
-            }
-            g2d.fillRoundRect(snake.getX(i) * CELL_SIZE + 2, snake.getY(i) * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4, 8, 8);
-        }
-    }
-
-    private void drawFood(Graphics2D g2d) {
-        Food food = gameEngine.getFood();
-        Food.FoodType type = food.getType();
-        if (type == Food.FoodType.APPLE) {
-            g2d.setColor(new Color(230, 60, 60));
-        } else if (type == Food.FoodType.GOLDEN) {
-            g2d.setColor(new Color(255, 215, 0));
-        } else {
-            g2d.setColor(new Color(150, 50, 200)); // Poison
-        }
-        g2d.fillOval(food.getX() * CELL_SIZE + 3, food.getY() * CELL_SIZE + 3, CELL_SIZE - 6, CELL_SIZE - 6);
-    }
-
-    private void drawObstacles(Graphics2D g2d) {
-        Board board = gameEngine.getBoard();
-        g2d.setColor(new Color(100, 100, 120));
-        for (Point p : board.getObstacles()) {
-            g2d.fillRect(p.x * CELL_SIZE + 1, p.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-        }
-    }
-
-    private void drawOverlay(Graphics2D g2d, String title, String subtitle) {
-        g2d.setColor(new Color(0, 0, 0, 160));
-        g2d.fillRect(0, 0, getWidth(), getHeight());
-
-        g2d.setColor(Color.WHITE);
-        g2d.setFont(new Font("Arial", Font.BOLD, 36));
-        FontMetrics fm = g2d.getFontMetrics();
-        g2d.drawString(title, (getWidth() - fm.stringWidth(title)) / 2, getHeight() / 2 - 20);
-
-        g2d.setFont(new Font("Arial", Font.PLAIN, 18));
-        fm = g2d.getFontMetrics();
-        g2d.drawString(subtitle, (getWidth() - fm.stringWidth(subtitle)) / 2, getHeight() / 2 + 25);
     }
 }

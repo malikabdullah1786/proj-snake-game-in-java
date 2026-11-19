@@ -1,89 +1,37 @@
 package com.arcade.snake;
 
-import javax.swing.*;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.nio.file.*;
 
-public class ScoreManager
-{
-    private static final String HIGH_SCORE_FILE = ".snake_highscore";
-    private int highScore;
-    private final List<Integer> topScores;
+public class ScoreManager {
+    private static final String FILE_NAME = ".snake_highscore";
+    private final Path filePath;
 
     public ScoreManager() {
-        this.topScores = new ArrayList<>();
-        this.highScore = 0;
-        loadHighScore();
+        String userHome = System.getProperty("user.home");
+        this.filePath = Paths.get(userHome, FILE_NAME);
     }
 
     public int getHighScore() {
-        return highScore;
-    }
-
-    public List<Integer> getTopScores() {
-        return Collections.unmodifiableList(topScores);
-    }
-
-    public boolean checkNewHighScore(int score) {
-        if (score > highScore) {
-            highScore = score;
+        if (!Files.exists(filePath)) {
+            return 0;
         }
-        if (!topScores.contains(score)) {
-            topScores.add(score);
-            topScores.sort(Collections.reverseOrder());
-            if (topScores.size() > 5) {
-                topScores.remove(topScores.size() - 1);
-            }
-        }
-        saveHighScore();
-        return score >= highScore;
-    }
-
-    private void loadHighScore() {
-        Path path = getHighScoreFilePath();
-        if (Files.exists(path)) {
-            try {
-                List<String> lines = Files.readAllLines(path);
-                topScores.clear();
-                for (String line : lines) {
-                    try {
-                        topScores.add(Integer.parseInt(line.trim()));
-                    } catch (NumberFormatException ignored) {}
-                }
-                topScores.sort(Collections.reverseOrder());
-                if (!topScores.isEmpty()) {
-                    highScore = topScores.get(0);
-                }
-            } catch (IOException e) {
-                System.err.println("Failed to load high score: " + e.getMessage());
-            }
-        }
-        if (topScores.isEmpty()) {
-            topScores.add(0);
-            highScore = 0;
-        }
-    }
-
-    private void saveHighScore() {
-        Path path = getHighScoreFilePath();
         try {
-            List<String> lines = new ArrayList<>();
-            for (Integer score : topScores) {
-                lines.add(score.toString());
-            }
-            Files.write(path, lines);
-        } catch (IOException e) {
-            System.err.println("Failed to save high score: " + e.getMessage());
+            String content = Files.readString(filePath).trim();
+            return Integer.parseInt(content);
+        } catch (IOException | NumberFormatException e) {
+            return 0;
         }
     }
 
-    private Path getHighScoreFilePath() {
-        String userHome = System.getProperty("user.home");
-        return Paths.get(userHome, HIGH_SCORE_FILE);
+    public void saveHighScore(int score) {
+        int currentHigh = getHighScore();
+        if (score > currentHigh) {
+            try {
+                Files.writeString(filePath, String.valueOf(score));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

@@ -1,98 +1,93 @@
 package com.arcade.snake;
 
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
+
 public class Snake {
-    private static final int MAX_LENGTH = 3600;
-    private final int[] x = new int[MAX_LENGTH];
-    private final int[] y = new int[MAX_LENGTH];
-    private int length;
+    private final List<Point> body;
     private Direction currentDirection;
     private Direction nextDirection;
+    private final int tileSize;
 
-    public Snake(int startX, int startY, int initialLength, Direction direction) {
-        this.length = Math.max(2, initialLength);
-        this.currentDirection = direction;
-        this.nextDirection = direction;
-
-        for (int i = 0; i < length; i++) {
-            x[i] = startX - (i * direction.getDx());
-            y[i] = startY - (i * direction.getDy());
-        }
+    public Snake(int tileSize) {
+        this.tileSize = tileSize;
+        body = new ArrayList<>();
+        // Initialize snake with 3 segments in the center
+        body.add(new Point(120, 120));
+        body.add(new Point(100, 120));
+        body.add(new Point(80, 120));
+        currentDirection = Direction.RIGHT;
+        nextDirection = Direction.RIGHT;
     }
 
-    public void move(int gridWidth, int gridHeight, boolean wrap) {
+    public void reset(int startX, int startY) {
+        body.clear();
+        body.add(new Point(startX, startY));
+        body.add(new Point(startX - tileSize, startY));
+        body.add(new Point(startX - 2 * tileSize, startY));
+        currentDirection = Direction.RIGHT;
+        nextDirection = Direction.RIGHT;
+    }
+
+    public void move(boolean grow) {
         currentDirection = nextDirection;
+        Point head = body.get(0);
+        Point newHead = new Point(head.x, head.y);
 
-        // Shift body segments
-        for (int i = length - 1; i > 0; i--) {
-            x[i] = x[i - 1];
-            y[i] = y[i - 1];
+        switch (currentDirection) {
+            case UP:
+                newHead.y -= tileSize;
+                break;
+            case DOWN:
+                newHead.y += tileSize;
+                break;
+            case LEFT:
+                newHead.x -= tileSize;
+                break;
+            case RIGHT:
+                newHead.x += tileSize;
+                break;
         }
 
-        // Move head
-        x[0] += currentDirection.getDx();
-        y[0] += currentDirection.getDy();
-
-        if (wrap) {
-            if (x[0] < 0) x[0] = gridWidth - 1;
-            else if (x[0] >= gridWidth) x[0] = 0;
-
-            if (y[0] < 0) y[0] = gridHeight - 1;
-            else if (y[0] >= gridHeight) y[0] = 0;
+        body.add(0, newHead);
+        if (!grow) {
+            body.remove(body.size() - 1);
         }
     }
 
-    public void grow() {
-        if (length < MAX_LENGTH) {
-            x[length] = x[length - 1];
-            y[length] = y[length - 1];
-            length++;
+    public boolean checkCollision(int width, int height) {
+        Point head = body.get(0);
+
+        // Wall collision
+        if (head.x < 0 || head.x >= width || head.y < 0 || head.y >= height) {
+            return true;
         }
+
+        // Self collision
+        for (int i = 1; i < body.size(); i++) {
+            if (head.equals(body.get(i))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void setDirection(Direction newDirection) {
-        if (!newDirection.isOpposite(currentDirection)) {
-            nextDirection = newDirection;
-        }
+        if (this.currentDirection == Direction.UP && newDirection == Direction.DOWN) return;
+        if (this.currentDirection == Direction.DOWN && newDirection == Direction.UP) return;
+        if (this.currentDirection == Direction.LEFT && newDirection == Direction.RIGHT) return;
+        if (this.currentDirection == Direction.RIGHT && newDirection == Direction.LEFT) return;
+        this.nextDirection = newDirection;
     }
 
-    public boolean checkSelfCollision() {
-        int headX = x[0];
-        int headY = y[0];
-        for (int i = 1; i < length; i++) {
-            if (x[i] == headX && y[i] == headY) {
-                return true;
-            }
-        }
-        return false;
+    public List<Point> getBody() {
+        return body;
     }
 
-    public boolean checkCollisionWith(int px, int py) {
-        for (int i = 0; i < length; i++) {
-            if (x[i] == px && y[i] == py) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public int getHeadX() {
-        return x[0];
-    }
-
-    public int getHeadY() {
-        return y[0];
-    }
-
-    public int getLength() {
-        return length;
-    }
-
-    public int getX(int index) {
-        return x[index];
-    }
-
-    public int getY(int index) {
-        return y[index];
+    public Point getHead() {
+        return body.get(0);
     }
 
     public Direction getCurrentDirection() {

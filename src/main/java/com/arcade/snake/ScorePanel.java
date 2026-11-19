@@ -1,45 +1,40 @@
 package com.arcade.snake;
 
-import javax.swing.*;
+import javax.swing.JPanel;
 import java.awt.*;
 
 public class ScorePanel extends JPanel {
-    private JLabel scoreLabel;
-    private JLabel highScoreLabel;
-    private JLabel levelLabel;
-    private GameEngine gameEngine;
+    private int score = 0;
+    private final ScoreManager scoreManager;
 
     public ScorePanel() {
-        setBackground(new Color(30, 30, 45));
-        setLayout(new FlowLayout(FlowLayout.CENTER, 30, 10));
-
-        scoreLabel = new JLabel("Score: 0");
-        highScoreLabel = new JLabel("High Score: 0");
-        levelLabel = new JLabel("Level: 1");
-
-        Font font = new Font("Arial", Font.BOLD, 14);
-        scoreLabel.setFont(font);
-        scoreLabel.setForeground(Color.WHITE);
-        highScoreLabel.setFont(font);
-        highScoreLabel.setForeground(Color.WHITE);
-        levelLabel.setFont(font);
-        levelLabel.setForeground(Color.WHITE);
-
-        add(scoreLabel);
-        add(highScoreLabel);
-        add(levelLabel);
+        this.scoreManager = new ScoreManager();
+        setPreferredSize(new Dimension(600, 45));
+        setBackground(new Color(15, 17, 23));
     }
 
-    public void setGameEngine(GameEngine gameEngine) {
-        this.gameEngine = gameEngine;
-        if (gameEngine != null) {
-            updateScore(gameEngine.getScore(), gameEngine.getScoreManager().getHighScore(), gameEngine.getLevel());
-        }
+    public void updateScore(int score) {
+        this.score = score;
+        repaint();
     }
 
-    public void updateScore(int score, int highScore, int level) {
-        scoreLabel.setText("Score: " + score);
-        highScoreLabel.setText("High Score: " + highScore);
-        levelLabel.setText("Level: " + level);
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g2d.setColor(new Color(240, 240, 245));
+        g2d.setFont(new Font("Monospaced", Font.BOLD, 18));
+
+        String scoreText = "SCORE: " + score;
+        int highScore = Math.max(score, scoreManager.getHighScore());
+        String highText = "HIGH SCORE: " + highScore;
+
+        g2d.drawString(scoreText, 25, 28);
+        
+        FontMetrics fm = g2d.getFontMetrics();
+        int highTextWidth = fm.stringWidth(highText);
+        g2d.drawString(highText, getWidth() - highTextWidth - 25, 28);
     }
 }
